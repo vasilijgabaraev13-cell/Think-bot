@@ -194,7 +194,7 @@ while True:
                         
                         response = (
                             f"{status_emoji}  {nickname}\n"
-                            f"💰 {profile.get('cash', 0):,}$\n"
+                            f"💰 {profile.get('cash', 0):.}$\n"
                             f"⛏ BTC: {profile.get('btc', 0)}₿\n"
                             f"💷 Фунты: {profile.get('funt', 0)}\n"
                             f"🆙 Уровень: {level} [{exp}/{exp_to_next}]\n"
@@ -375,7 +375,7 @@ while True:
                     
                     response = (
                         f"{status_emoji}  {nickname}\n"
-                        f"💰 {profile.get('cash', 0):,}$\n"
+                        f"💰 {profile.get('cash', 0):.}$\n"
                         f"⛏ BTC: {profile.get('btc', 0)}₿\n"
                         f"💷 Фунты: {profile.get('funt', 0)}\n"
                         f"🆙 Уровень: {level} [{exp}/{exp_to_next}]\n"
@@ -433,17 +433,17 @@ while True:
                     save_profiles(profiles)
                     
                     response = (
-                        f"✅ Ваш пассивный доход: {total_income:,}$\n"
+                        f"✅ Ваш пассивный доход: {total_income:.}$\n"
                         f"\n"
                         f"📊 Детали:\n"
-                        f"├─ База: {base_income:,}$\n"
-                        f"├─ Бонус за роль ({role}): +{bonus:,}$\n"
-                        f"├─ Бонус за уровень ({profile.get('level', 1)}): +{level_bonus:,}$\n"
-                        f"└─ Итого: {total_income:,}$"
+                        f"├─ База: {base_income:.}$\n"
+                        f"├─ Бонус за роль ({role}): +{bonus:.}$\n"
+                        f"├─ Бонус за уровень ({profile.get('level', 1)}): +{level_bonus:.}$\n"
+                        f"└─ Итого: {total_income:.}$"
                     )
                     
                     if role in ["модератор бота", "админ бота", "специальный администратор", "руководитель", "владелец"]:
-                        response += f"\n\n💡 Доход для работников Карл Бот - {bonus + 20000:,}$"
+                        response += f"\n\n💡 Доход для работников Карл Бот - {bonus + 20000:.}$"
                     
                     keyboard = get_main_keyboard()
                     vk.messages.send(user_id=user_id, message=response, random_id=0, keyboard=keyboard.get_keyboard())
@@ -486,15 +486,15 @@ while True:
                     response = (
                         f"🎁 ВЫ ПОЛУЧИЛИ БОНУС!\n"
                         f"╭──────────────────────╮\n"
-                        f"│ Сумма: {total_bonus:,}$\n"
+                        f"│ Сумма: {total_bonus:.}$\n"
                         f"├──────────────────────┤\n"
-                        f"│ 🎲 Основной: {bonus_amount:,}$\n"
+                        f"│ 🎲 Основной: {bonus_amount:.}$\n"
                     )
                     
                     if is_worker:
-                        response += f"│ 👑 Работник: +{worker_bonus:,}$\n"
+                        response += f"│ 👑 Работник: +{worker_bonus:.}$\n"
                     
-                    response += f"│ 💰 Баланс: {profiles[str(user_id)]['cash']:,}$\n"
+                    response += f"│ 💰 Баланс: {profiles[str(user_id)]['cash']:.}$\n"
                     response += f"╰──────────────────────╯"
                     
                     keyboard = get_main_keyboard()
