@@ -69,6 +69,9 @@ def get_id_from_mention(text):
         return int(match.group(1))
     return None
 
+def format_number(n):
+    return f"{n:,}".replace(",", ".")
+
 def get_main_keyboard():
     keyboard = VkKeyboard(one_time=False)
     keyboard.add_button("💼 Пассивный доход", color=VkKeyboardColor.SECONDARY)
@@ -194,7 +197,7 @@ while True:
                         
                         response = (
                             f"{status_emoji}  {nickname}\n"
-                            f"💰 {profile.get('cash', 0):.}$\n"
+                            f"💰 {format_number(profile.get('cash', 0))}$\n"
                             f"⛏ BTC: {profile.get('btc', 0)}₿\n"
                             f"💷 Фунты: {profile.get('funt', 0)}\n"
                             f"🆙 Уровень: {level} [{exp}/{exp_to_next}]\n"
@@ -375,7 +378,7 @@ while True:
                     
                     response = (
                         f"{status_emoji}  {nickname}\n"
-                        f"💰 {profile.get('cash', 0):.}$\n"
+                        f"💰 {format_number(profile.get('cash', 0))}$\n"
                         f"⛏ BTC: {profile.get('btc', 0)}₿\n"
                         f"💷 Фунты: {profile.get('funt', 0)}\n"
                         f"🆙 Уровень: {level} [{exp}/{exp_to_next}]\n"
@@ -433,17 +436,17 @@ while True:
                     save_profiles(profiles)
                     
                     response = (
-                        f"✅ Ваш пассивный доход: {total_income:.}$\n"
+                        f"✅ Ваш пассивный доход: {format_number(total_income)}$\n"
                         f"\n"
                         f"📊 Детали:\n"
-                        f"├─ База: {base_income:.}$\n"
-                        f"├─ Бонус за роль ({role}): +{bonus:.}$\n"
-                        f"├─ Бонус за уровень ({profile.get('level', 1)}): +{level_bonus:.}$\n"
-                        f"└─ Итого: {total_income:.}$"
+                        f"├─ База: {format_number(base_income)}$\n"
+                        f"├─ Бонус за роль ({role}): +{format_number(bonus)}$\n"
+                        f"├─ Бонус за уровень ({profile.get('level', 1)}): +{format_number(level_bonus)}$\n"
+                        f"└─ Итого: {format_number(total_income)}$"
                     )
                     
                     if role in ["модератор бота", "админ бота", "специальный администратор", "руководитель", "владелец"]:
-                        response += f"\n\n💡 Доход для работников Карл Бот - {bonus + 20000:.}$"
+                        response += f"\n\n💡 Доход для работников Карл Бот - {format_number(bonus + 20000)}$"
                     
                     keyboard = get_main_keyboard()
                     vk.messages.send(user_id=user_id, message=response, random_id=0, keyboard=keyboard.get_keyboard())
@@ -486,15 +489,15 @@ while True:
                     response = (
                         f"🎁 ВЫ ПОЛУЧИЛИ БОНУС!\n"
                         f"╭──────────────────────╮\n"
-                        f"│ Сумма: {total_bonus:.}$\n"
+                        f"│ Сумма: {format_number(total_bonus)}$\n"
                         f"├──────────────────────┤\n"
-                        f"│ 🎲 Основной: {bonus_amount:.}$\n"
+                        f"│ 🎲 Основной: {format_number(bonus_amount)}$\n"
                     )
                     
                     if is_worker:
-                        response += f"│ 👑 Работник: +{worker_bonus:.}$\n"
+                        response += f"│ 👑 Работник: +{format_number(worker_bonus)}$\n"
                     
-                    response += f"│ 💰 Баланс: {profiles[str(user_id)]['cash']:.}$\n"
+                    response += f"│ 💰 Баланс: {format_number(profiles[str(user_id)]['cash'])}$\n"
                     response += f"╰──────────────────────╯"
                     
                     keyboard = get_main_keyboard()
@@ -542,7 +545,6 @@ while True:
                 if text.startswith("/setstaff"):
                     user_role = get_user_role(user_id, roles)
                     
-                    # Проверка прав (только руководитель и выше)
                     if get_role_level(user_role) < 4:
                         vk.messages.send(
                             user_id=user_id,
@@ -551,7 +553,6 @@ while True:
                         )
                         continue
                     
-                    # Парсим команду
                     parts = text.split()
                     if len(parts) < 3:
                         vk.messages.send(
@@ -561,7 +562,6 @@ while True:
                         )
                         continue
                     
-                    # Получаем ID из упоминания
                     target_id = get_id_from_mention(msg['text'])
                     if not target_id:
                         vk.messages.send(
@@ -573,7 +573,6 @@ while True:
                     
                     role_name = ' '.join(parts[2:]).lower()
                     
-                    # Проверяем существование роли
                     if role_name not in ROLE_HIERARCHY:
                         vk.messages.send(
                             user_id=user_id,
@@ -582,7 +581,6 @@ while True:
                         )
                         continue
                     
-                    # Проверка, может ли выдающий выдавать эту роль
                     if get_role_level(user_role) <= get_role_level(role_name):
                         vk.messages.send(
                             user_id=user_id,
@@ -591,7 +589,6 @@ while True:
                         )
                         continue
                     
-                    # Выдаём роль
                     roles[str(target_id)] = role_name
                     save_roles(roles)
                     
