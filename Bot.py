@@ -69,41 +69,28 @@ def get_id_from_mention(text):
     return None
 
 def get_main_keyboard():
-    """Главная клавиатура как на скриншоте"""
     keyboard = VkKeyboard(one_time=False)
-    
-    # Первая строка
     keyboard.add_button("💼 Пассивный доход", color=VkKeyboardColor.SECONDARY)
     keyboard.add_button("🏙️ Город", color=VkKeyboardColor.SECONDARY)
     keyboard.add_button("👤 Профиль", color=VkKeyboardColor.PRIMARY)
     keyboard.add_line()
-    
-    # Вторая строка
     keyboard.add_button("⛏️ Майнинг", color=VkKeyboardColor.SECONDARY)
     keyboard.add_button("📢 Промо", color=VkKeyboardColor.SECONDARY)
     keyboard.add_button("🏆 Топ", color=VkKeyboardColor.SECONDARY)
     keyboard.add_line()
-    
-    # Третья строка
     keyboard.add_button("🎁 Бонус", color=VkKeyboardColor.SECONDARY)
     keyboard.add_button("👥 Кланы", color=VkKeyboardColor.SECONDARY)
     keyboard.add_button("📋 Задания", color=VkKeyboardColor.SECONDARY)
     keyboard.add_line()
-    
-    # Четвёртая строка
     keyboard.add_button("📦 Боксы", color=VkKeyboardColor.SECONDARY)
     keyboard.add_button("🏅 Достижения", color=VkKeyboardColor.SECONDARY)
     keyboard.add_button("🏆 Трофеи", color=VkKeyboardColor.SECONDARY)
     keyboard.add_line()
-    
-    # Пятая строка
     keyboard.add_button("💰 Донат", color=VkKeyboardColor.POSITIVE)
     keyboard.add_button("❓ Помощь", color=VkKeyboardColor.PRIMARY)
-    
     return keyboard
 
 def get_registration_keyboard():
-    """Клавиатура с кнопкой регистрации"""
     keyboard = VkKeyboard(one_time=False)
     keyboard.add_button("✅ Регистрация", color=VkKeyboardColor.POSITIVE)
     keyboard.add_line()
@@ -140,9 +127,10 @@ while True:
                 peer_id = msg['peer_id']
                 is_chat = peer_id > 2000000000
                 
-                # Обработка в беседах — не отправляем клавиатуру
+                # ============================================
+                # БЕСЕДЫ
+                # ============================================
                 if is_chat:
-                    # В беседах только текстовые команды
                     if text == "/start":
                         if peer_id not in active_chats:
                             active_chats.append(peer_id)
@@ -151,34 +139,146 @@ while True:
                             vk.messages.send(peer_id=peer_id, message="✅ Конференция уже активна", random_id=0)
                         continue
                     
-                    if text == "/профиль" or text == "👤 профиль":
-                        # Показываем профиль в беседе
+                    if text == "/профиль":
                         if not is_registered(user_id):
-                            vk.messages.send(peer_id=peer_id, message="⚠️ Вы не зарегистрированы! Напишите боту в личные сообщения для регистрации.", random_id=0)
+                            vk.messages.send(peer_id=peer_id, message="⚠️ Вы не зарегистрированы! Напишите боту в личные сообщения.", random_id=0)
                             continue
-                        # ... код профиля (сокращённо)
+                        
+                        if str(user_id) not in profiles:
+                            profiles[str(user_id)] = {
+                                "nickname": f"User{user_id}",
+                                "reg_date": datetime.now().strftime("%d:%m %H:%M %y"),
+                                "cash": 100,
+                                "donat": 0,
+                                "btc": 0,
+                                "funt": 0,
+                                "level": 1,
+                                "exp": 0,
+                                "exp_to_next": 10,
+                                "reputation": 0,
+                                "achievements": 0,
+                                "max_achievements": 4598,
+                                "notifications": ["Получите пенсию в банке", "Включите майнинг ферму", "Получить пассивный доход"]
+                            }
+                            save_profiles(profiles)
+                        
+                        profile = profiles[str(user_id)]
+                        role = get_user_role(user_id, roles)
+                        
+                        try:
+                            user_info = vk.users.get(user_ids=user_id)
+                            nickname = user_info[0]['first_name'] + " " + user_info[0]['last_name']
+                        except:
+                            nickname = profile.get('nickname', f"User{user_id}")
+                        
+                        status_emoji = {
+                            "владелец": "👑",
+                            "руководитель": "⭐",
+                            "специальный администратор": "🔰",
+                            "админ бота": "🛡️",
+                            "модератор бота": "⚙️",
+                            "игрок": "☃️"
+                        }.get(role, "☃️")
+                        
+                        level = profile.get('level', 1)
+                        exp = profile.get('exp', 0)
+                        exp_to_next = profile.get('exp_to_next', 10)
+                        
+                        notifications = profile.get('notifications', ["Нет уведомлений"])
+                        notif_text = "\n".join([f"• {n}" for n in notifications[:5]])
+                        
+                        achievements = profile.get('achievements', 0)
+                        max_achievements = profile.get('max_achievements', 4598)
+                        progress = round(achievements / max_achievements * 100, 1) if max_achievements > 0 else 0
+                        
+                        response = (
+                            f"{status_emoji}  {nickname}\n"
+                            f"💰 {profile.get('cash', 0):,}$\n"
+                            f"⛏ BTC: {profile.get('btc', 0)}₿\n"
+                            f"💷 Фунты: {profile.get('funt', 0)}\n"
+                            f"🆙 Уровень: {level} [{exp}/{exp_to_next}]\n"
+                            f"👍🏻 Репутация: {profile.get('reputation', 0)}\n"
+                            f"🏅 Достижения: {achievements}/{max_achievements} | {progress}%\n"
+                            f"🆔 {user_id}\n"
+                            f"🔔 Уведомления:\n{notif_text}"
+                        )
+                        vk.messages.send(peer_id=peer_id, message=response, random_id=0)
                         continue
                     
-                    if text == "/регистрация":
-                        vk.messages.send(peer_id=peer_id, message="📝 Для регистрации напишите боту в личные сообщения.", random_id=0)
-                        continue
-                    
-                    # Остальные команды в беседах
                     if text == "/роли":
-                        # ... код ролей
-                        continue
-                    if text == "/staff":
-                        # ... код staff
-                        continue
-                    if text in ["/ping", "/status", "/botstatus"]:
-                        # ... код ping
+                        role_list = ""
+                        for role, level in sorted(ROLE_HIERARCHY.items(), key=lambda x: -x[1]):
+                            role_list += f"👑 {role} — уровень {level}\n"
+                        response = f"📋 СПИСОК РОЛЕЙ\n╭──────────────────────╮\n{role_list}╰──────────────────────╯"
+                        vk.messages.send(peer_id=peer_id, message=response, random_id=0)
                         continue
                     
+                    if text == "/staff":
+                        staff_list = ""
+                        for uid, role in roles.items():
+                            try:
+                                user_info = vk.users.get(user_ids=uid)
+                                name = user_info[0]['first_name'] + " " + user_info[0]['last_name']
+                                staff_list += f"{name} — {role}\n"
+                            except:
+                                staff_list += f"ID{uid} — {role}\n"
+                        if staff_list == "":
+                            staff_list = "Сотрудников нет"
+                        response = f"👥 СОТРУДНИКИ\n╭──────────────────────╮\n{staff_list}╰──────────────────────╯"
+                        vk.messages.send(peer_id=peer_id, message=response, random_id=0)
+                        continue
+                    
+                    if text in ["/ping", "/status", "/botstatus"]:
+                        try:
+                            api_start = time.time()
+                            vk.users.get(user_ids=[1])
+                            api_ping = round((time.time() - api_start) * 1000)
+                            core_start = time.time()
+                            _ = [i for i in range(1000)]
+                            core_time = round((time.time() - core_start) * 1000, 2)
+                            uptime_seconds = int(time.time() - bot_start_time)
+                            hours = uptime_seconds // 3600
+                            minutes = (uptime_seconds % 3600) // 60
+                            seconds = uptime_seconds % 60
+                            if hours > 0:
+                                uptime_str = f"{hours}ч {minutes}м {seconds}с"
+                            elif minutes > 0:
+                                uptime_str = f"{minutes}м {seconds}с"
+                            else:
+                                uptime_str = f"{seconds}с"
+                            if api_ping < 200:
+                                api_status = "🟢 Отлично"
+                            elif api_ping < 500:
+                                api_status = "🟡 Средняя нагрузка"
+                            elif api_ping < 1000:
+                                api_status = "🟠 Высокая нагрузка"
+                            else:
+                                api_status = "🔴 Критично"
+                            session_id = hex(int(time.time() * 1000) % 0xFFFFFFFF)[2:]
+                            response = (
+                                f"📡 ДИАГНОСТИКА БОТА\n"
+                                f"╭──────────────────────╮\n"
+                                f"│ {api_status}: {api_ping} мс\n"
+                                f"│ VK API: {api_ping} мс\n"
+                                f"│ Ядро: {core_time} мс\n"
+                                f"│ Uptime: {uptime_str}\n"
+                                f"│ Session: {session_id}\n"
+                                f"│ Активен в чатах: {len(active_chats)}\n"
+                                f"╰──────────────────────╯"
+                            )
+                        except Exception as e:
+                            response = f"🔴 Ошибка: {str(e)[:50]}"
+                        vk.messages.send(peer_id=peer_id, message=response, random_id=0)
+                        continue
+                    
+                    # В беседах остальное игнорируем
                     continue
                 
-                # ========== ЛИЧНЫЕ СООБЩЕНИЯ ==========
+                # ============================================
+                # ЛИЧНЫЕ СООБЩЕНИЯ
+                # ============================================
                 
-                # Проверка регистрации
+                # Если не зарегистрирован
                 if not is_registered(user_id):
                     reg_link = "https://vk.ru/rich_bot11"
                     response = (
@@ -188,17 +288,10 @@ while True:
                         f"{reg_link}"
                     )
                     keyboard = get_registration_keyboard()
-                    vk.messages.send(
-                        user_id=user_id,
-                        message=response,
-                        random_id=0,
-                        keyboard=keyboard.get_keyboard()
-                    )
+                    vk.messages.send(user_id=user_id, message=response, random_id=0, keyboard=keyboard.get_keyboard())
                     continue
                 
-                # ========== КНОПКИ ГЛАВНОГО МЕНЮ ==========
-                
-                # Регистрация (только для незарегистрированных, но обработаем)
+                # ===== РЕГИСТРАЦИЯ =====
                 if text == "✅ регистрация":
                     if not is_registered(user_id):
                         if str(user_id) not in profiles:
@@ -215,46 +308,22 @@ while True:
                                 "reputation": 0,
                                 "achievements": 0,
                                 "max_achievements": 4598,
-                                "youtube": "Отсутствует",
-                                "yacht": "Отсутствует",
-                                "car": "Отсутствует",
-                                "farm": 0,
-                                "pet": "Отсутствует",
-                                "business": "Отсутствует",
-                                "house": "Отсутствует",
                                 "notifications": ["Получите пенсию в банке", "Включите майнинг ферму", "Получить пассивный доход"]
                             }
                             save_profiles(profiles)
                         
-                        registered[str(user_id)] = {
-                            "registered_at": datetime.now().strftime("%d:%m %H:%M %y"),
-                            "active": True
-                        }
+                        registered[str(user_id)] = {"registered_at": datetime.now().strftime("%d:%m %H:%M %y"), "active": True}
                         save_registered(registered)
                         
-                        response = (
-                            "✅ Регистрация завершена!\n"
-                            "👋 Добро пожаловать!\n"
-                            "💰 Вам начислено 100$ стартового капитала"
-                        )
+                        response = "✅ Регистрация завершена!\n👋 Добро пожаловать!\n💰 Вам начислено 100$ стартового капитала"
                         keyboard = get_main_keyboard()
-                        vk.messages.send(
-                            user_id=user_id,
-                            message=response,
-                            random_id=0,
-                            keyboard=keyboard.get_keyboard()
-                        )
+                        vk.messages.send(user_id=user_id, message=response, random_id=0, keyboard=keyboard.get_keyboard())
                     else:
                         keyboard = get_main_keyboard()
-                        vk.messages.send(
-                            user_id=user_id,
-                            message="✅ Вы уже зарегистрированы!",
-                            random_id=0,
-                            keyboard=keyboard.get_keyboard()
-                        )
+                        vk.messages.send(user_id=user_id, message="✅ Вы уже зарегистрированы!", random_id=0, keyboard=keyboard.get_keyboard())
                     continue
                 
-                # ========== ПРОФИЛЬ ==========
+                # ===== ПРОФИЛЬ =====
                 if text in ["👤 профиль", "/профиль"]:
                     if str(user_id) not in profiles:
                         profiles[str(user_id)] = {
@@ -270,13 +339,6 @@ while True:
                             "reputation": 0,
                             "achievements": 0,
                             "max_achievements": 4598,
-                            "youtube": "Отсутствует",
-                            "yacht": "Отсутствует",
-                            "car": "Отсутствует",
-                            "farm": 0,
-                            "pet": "Отсутствует",
-                            "business": "Отсутствует",
-                            "house": "Отсутствует",
                             "notifications": ["Получите пенсию в банке", "Включите майнинг ферму", "Получить пассивный доход"]
                         }
                         save_profiles(profiles)
@@ -323,15 +385,10 @@ while True:
                     )
                     
                     keyboard = get_main_keyboard()
-                    vk.messages.send(
-                        user_id=user_id,
-                        message=response,
-                        random_id=0,
-                        keyboard=keyboard.get_keyboard()
-                    )
+                    vk.messages.send(user_id=user_id, message=response, random_id=0, keyboard=keyboard.get_keyboard())
                     continue
                 
-                # ========== ПОМОЩЬ ==========
+                # ===== ПОМОЩЬ =====
                 if text in ["❓ помощь", "/помощь", "/help"]:
                     response = (
                         "❓ ПОМОЩЬ\n"
@@ -353,46 +410,27 @@ while True:
                         "╰──────────────────────╯"
                     )
                     keyboard = get_main_keyboard()
-                    vk.messages.send(
-                        user_id=user_id,
-                        message=response,
-                        random_id=0,
-                        keyboard=keyboard.get_keyboard()
-                    )
+                    vk.messages.send(user_id=user_id, message=response, random_id=0, keyboard=keyboard.get_keyboard())
                     continue
                 
-                # ========== ОСТАЛЬНЫЕ КНОПКИ (В РАЗРАБОТКЕ) ==========
+                # ===== ВСЕ ОСТАЛЬНЫЕ КНОПКИ =====
                 if text in [
                     "💼 пассивный доход", "🏙️ город", "⛏️ майнинг",
                     "📢 промо", "🏆 топ", "🎁 бонус", "👥 кланы",
                     "📋 задания", "📦 боксы", "🏅 достижения",
                     "🏆 трофеи", "💰 донат"
                 ]:
-                    response = (
-                        f"🔧 Функция '{text}' в разработке!\n"
-                        f"Следите за обновлениями бота."
-                    )
+                    response = f"🔧 Функция '{text}' в разработке!\nСледите за обновлениями бота."
                     keyboard = get_main_keyboard()
-                    vk.messages.send(
-                        user_id=user_id,
-                        message=response,
-                        random_id=0,
-                        keyboard=keyboard.get_keyboard()
-                    )
+                    vk.messages.send(user_id=user_id, message=response, random_id=0, keyboard=keyboard.get_keyboard())
                     continue
                 
-                # ========== КОМАНДА /СТАРТ ==========
+                # ===== КОМАНДЫ =====
                 if text == "/start":
                     keyboard = get_main_keyboard()
-                    vk.messages.send(
-                        user_id=user_id,
-                        message="👋 Добро пожаловать!\nИспользуйте кнопки меню для навигации.",
-                        random_id=0,
-                        keyboard=keyboard.get_keyboard()
-                    )
+                    vk.messages.send(user_id=user_id, message="👋 Добро пожаловать!\nИспользуйте кнопки меню для навигации.", random_id=0, keyboard=keyboard.get_keyboard())
                     continue
                 
-                # ========== КОМАНДА /КОМАНДЫ ==========
                 if text in ["/команды", "📋 команды"]:
                     response = (
                         "📋 ДОСТУПНЫЕ КОМАНДЫ\n"
@@ -405,15 +443,9 @@ while True:
                         "╰──────────────────────╯"
                     )
                     keyboard = get_main_keyboard()
-                    vk.messages.send(
-                        user_id=user_id,
-                        message=response,
-                        random_id=0,
-                        keyboard=keyboard.get_keyboard()
-                    )
+                    vk.messages.send(user_id=user_id, message=response, random_id=0, keyboard=keyboard.get_keyboard())
                     continue
                 
-                # ========== ОСТАЛЬНЫЕ ТЕКСТОВЫЕ КОМАНДЫ ==========
                 if text == "/роли":
                     role_list = ""
                     for role, level in sorted(ROLE_HIERARCHY.items(), key=lambda x: -x[1]):
@@ -437,28 +469,24 @@ while True:
                     vk.messages.send(user_id=user_id, message=response, random_id=0)
                     continue
                 
-                if text == "/ping":
+                if text in ["/ping", "/status", "/botstatus"]:
                     try:
                         api_start = time.time()
                         vk.users.get(user_ids=[1])
                         api_ping = round((time.time() - api_start) * 1000)
-                        
                         core_start = time.time()
                         _ = [i for i in range(1000)]
                         core_time = round((time.time() - core_start) * 1000, 2)
-                        
                         uptime_seconds = int(time.time() - bot_start_time)
                         hours = uptime_seconds // 3600
                         minutes = (uptime_seconds % 3600) // 60
                         seconds = uptime_seconds % 60
-                        
                         if hours > 0:
                             uptime_str = f"{hours}ч {minutes}м {seconds}с"
                         elif minutes > 0:
                             uptime_str = f"{minutes}м {seconds}с"
                         else:
                             uptime_str = f"{seconds}с"
-                        
                         if api_ping < 200:
                             api_status = "🟢 Отлично"
                         elif api_ping < 500:
@@ -467,9 +495,7 @@ while True:
                             api_status = "🟠 Высокая нагрузка"
                         else:
                             api_status = "🔴 Критично"
-                        
                         session_id = hex(int(time.time() * 1000) % 0xFFFFFFFF)[2:]
-                        
                         response = (
                             f"📡 ДИАГНОСТИКА БОТА\n"
                             f"╭──────────────────────╮\n"
@@ -483,7 +509,6 @@ while True:
                         )
                     except Exception as e:
                         response = f"🔴 Ошибка: {str(e)[:50]}"
-                    
                     vk.messages.send(user_id=user_id, message=response, random_id=0)
                     continue
                         
