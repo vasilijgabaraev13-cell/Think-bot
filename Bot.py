@@ -1,5 +1,6 @@
 import vk_api
 from vk_api.bot_longpoll import VkBotLongPoll, VkBotEventType
+from vk_api.keyboard import VkKeyboard, VkKeyboardColor
 import time
 import json
 import os
@@ -48,7 +49,7 @@ ROLE_HIERARCHY = {
     "модератор бота": 1
 }
 
-# Владельцы (ID @zlodels и @a.tolkochekov)
+# Владельцы
 OWNERS = [838435015, 1097630503]
 
 # Получить уровень роли
@@ -66,6 +67,14 @@ def get_id_from_mention(text):
     if match:
         return int(match.group(1))
     return None
+
+# Создать клавиатуру для личных сообщений
+def get_private_keyboard():
+    keyboard = VkKeyboard(one_time=False)
+    keyboard.add_button("🔵 Профиль", color=VkKeyboardColor.PRIMARY)
+    keyboard.add_line()
+    keyboard.add_button("📋 Команды", color=VkKeyboardColor.SECONDARY)
+    return keyboard
 
 # Загружаем данные
 roles = load_roles()
@@ -94,24 +103,8 @@ while True:
                 peer_id = msg['peer_id']
                 is_chat = peer_id > 2000000000
                 
-                # ========== КОМАНДА /РОЛИ ==========
-                if text == "/роли":
-                    role_list = ""
-                    for role, level in sorted(ROLE_HIERARCHY.items(), key=lambda x: -x[1]):
-                        role_list += f"👑 {role} — уровень {level}\n"
-                    
-                    response = (
-                        f"📋 СПИСОК РОЛЕЙ\n"
-                        f"╭──────────────────────╮\n"
-                        f"{role_list}"
-                        f"╰──────────────────────╯\n"
-                        f"🎮 /профиль — посмотреть свой профиль\n"
-                        f"👑 /staff — список сотрудников"
-                    )
-                    vk.messages.send(peer_id=peer_id, message=response, random_id=0)
-                
-                # ========== КОМАНДА /ПРОФИЛЬ ==========
-                elif text == "/профиль":
+                # ========== ОБРАБОТКА КНОПКИ "🔵 Профиль" ==========
+                if text == "🔵 профиль" or text == "/профиль":
                     # Создаём профиль если нет
                     if str(user_id) not in profiles:
                         profiles[str(user_id)] = {
@@ -168,7 +161,57 @@ while True:
                         f"\n"
                         f"⌚ Дата регистрации: {profile.get('reg_date', 'Неизвестно')}"
                     )
-                    vk.messages.send(user_id=user_id, message=response, random_id=0)
+                    
+                    # В личных сообщениях отправляем с клавиатурой
+                    if not is_chat:
+                        keyboard = get_private_keyboard()
+                        vk.messages.send(
+                            user_id=user_id,
+                            message=response,
+                            random_id=0,
+                            keyboard=keyboard.get_keyboard()
+                        )
+                    else:
+                        vk.messages.send(peer_id=peer_id, message=response, random_id=0)
+                
+                # ========== КОМАНДА /КОМАНДЫ ==========
+                elif text == "📋 команды" or text == "/команды":
+                    response = (
+                        "📋 ДОСТУПНЫЕ КОМАНДЫ\n"
+                        "╭──────────────────────╮\n"
+                        "│ /роли — список ролей\n"
+                        "│ /staff — список сотрудников\n"
+                        "│ /профиль — ваш профиль\n"
+                        "│ /ping — диагностика\n"
+                        "│ /start — активация бота\n"
+                        "╰──────────────────────╯"
+                    )
+                    if not is_chat:
+                        keyboard = get_private_keyboard()
+                        vk.messages.send(
+                            user_id=user_id,
+                            message=response,
+                            random_id=0,
+                            keyboard=keyboard.get_keyboard()
+                        )
+                    else:
+                        vk.messages.send(peer_id=peer_id, message=response, random_id=0)
+                
+                # ========== КОМАНДА /РОЛИ ==========
+                elif text == "/роли":
+                    role_list = ""
+                    for role, level in sorted(ROLE_HIERARCHY.items(), key=lambda x: -x[1]):
+                        role_list += f"👑 {role} — уровень {level}\n"
+                    
+                    response = (
+                        f"📋 СПИСОК РОЛЕЙ\n"
+                        f"╭──────────────────────╮\n"
+                        f"{role_list}"
+                        f"╰──────────────────────╯\n"
+                        f"🎮 /профиль — посмотреть свой профиль\n"
+                        f"👑 /staff — список сотрудников"
+                    )
+                    vk.messages.send(peer_id=peer_id, message=response, random_id=0)
                 
                 # ========== КОМАНДА /STAFF ==========
                 elif text == "/staff":
@@ -196,18 +239,15 @@ while True:
                 elif text.startswith("/setstaff"):
                     user_role = get_user_role(user_id, roles)
                     
-                    # Проверка прав (только руководитель и выше)
                     if get_role_level(user_role) < 4:
                         vk.messages.send(peer_id=peer_id, message="❌ У вас нет прав для выдачи ролей", random_id=0)
                         continue
                     
-                    # Парсим команду
                     parts = text.split()
                     if len(parts) < 3:
                         vk.messages.send(peer_id=peer_id, message="❌ Использование: /setstaff [@пользователь] [название_роли]", random_id=0)
                         continue
                     
-                    # Получаем ID из упоминания
                     target_id = get_id_from_mention(msg['text'])
                     if not target_id:
                         vk.messages.send(peer_id=peer_id, message="❌ Упомяните пользователя (@)", random_id=0)
@@ -215,17 +255,14 @@ while True:
                     
                     role_name = ' '.join(parts[2:]).lower()
                     
-                    # Проверяем существование роли
                     if role_name not in ROLE_HIERARCHY:
-                        vk.messages.send(peer_id=peer_id, message="❌ Неверное название роли\nДоступные: руководитель, специальный администратор, админ бота, модератор бота", random_id=0)
+                        vk.messages.send(peer_id=peer_id, message="❌ Неверное название роли", random_id=0)
                         continue
                     
-                    # Проверка, может ли выдающий выдавать эту роль
                     if get_role_level(user_role) <= get_role_level(role_name):
                         vk.messages.send(peer_id=peer_id, message="❌ Вы не можете выдать роль выше или равную вашей", random_id=0)
                         continue
                     
-                    # Выдаём роль
                     roles[str(target_id)] = role_name
                     save_roles(roles)
                     
@@ -242,26 +279,29 @@ while True:
                     if is_chat:
                         if peer_id not in active_chats:
                             active_chats.append(peer_id)
-                            vk.messages.send(peer_id=peer_id, message="✅ Бот активирован в этой беседе!\n📋 Доступные команды: /роли, /staff, /профиль", random_id=0)
+                            vk.messages.send(peer_id=peer_id, message="✅ Бот активирован в этой беседе!", random_id=0)
                         else:
                             vk.messages.send(peer_id=peer_id, message="✅ Конференция уже активна", random_id=0)
                     else:
-                        vk.messages.send(user_id=user_id, message="📋 Мои команды:\n/роли — список ролей\n/staff — список сотрудников\n/профиль — ваш профиль", random_id=0)
+                        keyboard = get_private_keyboard()
+                        vk.messages.send(
+                            user_id=user_id,
+                            message="👋 Привет! Я бот-помощник\nНажми на кнопку 🔵 Профиль, чтобы посмотреть свой профиль",
+                            random_id=0,
+                            keyboard=keyboard.get_keyboard()
+                        )
                 
-                # ========== КОМАНДА /PING /STATUS /BOTSTATUS ==========
+                # ========== КОМАНДА /PING ==========
                 elif text in ["/ping", "/status", "/botstatus"]:
                     try:
-                        # Замеряем пинг VK API
                         api_start = time.time()
                         vk.users.get(user_ids=[1])
                         api_ping = round((time.time() - api_start) * 1000)
                         
-                        # Замеряем скорость ядра
                         core_start = time.time()
                         _ = [i for i in range(1000)]
                         core_time = round((time.time() - core_start) * 1000, 2)
                         
-                        # Uptime
                         uptime_seconds = int(time.time() - bot_start_time)
                         hours = uptime_seconds // 3600
                         minutes = (uptime_seconds % 3600) // 60
@@ -274,7 +314,6 @@ while True:
                         else:
                             uptime_str = f"{seconds}с"
                         
-                        # Определяем статус API
                         if api_ping < 200:
                             api_status = "🟢 Отлично"
                         elif api_ping < 500:
@@ -284,7 +323,6 @@ while True:
                         else:
                             api_status = "🔴 Критично"
                         
-                        # Сессия
                         session_id = hex(int(time.time() * 1000) % 0xFFFFFFFF)[2:]
                         
                         response = (
@@ -296,8 +334,7 @@ while True:
                             f"│ Uptime: {uptime_str}\n"
                             f"│ Session: {session_id}\n"
                             f"│ Активен в чатах: {len(active_chats)}\n"
-                            f"╰──────────────────────╯\n"
-                            f"Команды: /start, /ping, /роли, /профиль"
+                            f"╰──────────────────────╯"
                         )
                     except Exception as e:
                         response = f"🔴 Ошибка: {str(e)[:50]}"
