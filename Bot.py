@@ -15,6 +15,7 @@ bot_start_time = time.time()
 ROLES_FILE = "roles.json"
 PROFILES_FILE = "profiles.json"
 REGISTERED_FILE = "registered.json"
+COOLDOWN_FILE = "cooldown.json"
 
 def load_roles():
     if os.path.exists(ROLES_FILE):
@@ -45,6 +46,16 @@ def load_registered():
 def save_registered(registered):
     with open(REGISTERED_FILE, 'w', encoding='utf-8') as f:
         json.dump(registered, f, ensure_ascii=False, indent=2)
+
+def load_cooldown():
+    if os.path.exists(COOLDOWN_FILE):
+        with open(COOLDOWN_FILE, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    return {}
+
+def save_cooldown(cooldown):
+    with open(COOLDOWN_FILE, 'w', encoding='utf-8') as f:
+        json.dump(cooldown, f, ensure_ascii=False, indent=2)
 
 ROLE_HIERARCHY = {
     "владелец": 5,
@@ -695,7 +706,7 @@ while True:
                     vk.messages.send(user_id=user_id, message=response, random_id=0, keyboard=keyboard.get_keyboard())
                     continue
                 
-                # 🏆 Топ - ПОКАЗЫВАЕТ ВСЕ ТОПЫ
+                # 🏆 Топ
                 if text == "🏆 топ":
                     response = (
                         "🏆 ВСЕ ТОПЫ\n"
@@ -713,10 +724,29 @@ while True:
                     vk.messages.send(user_id=user_id, message=response, random_id=0, keyboard=keyboard.get_keyboard())
                     continue
                 
-                # 🎁 Бонус
+                # 🎁 Бонус (с КД 15 минут)
                 if text == "🎁 бонус":
                     if not is_registered(user_id):
                         continue
+                    
+                    # Загрузка КД
+                    cooldown = load_cooldown()
+                    current_time = time.time()
+                    cooldown_seconds = 15 * 60  # 15 минут
+                    
+                    if str(user_id) in cooldown:
+                        last_use = cooldown[str(user_id)]
+                        if current_time - last_use < cooldown_seconds:
+                            remaining = int(cooldown_seconds - (current_time - last_use))
+                            minutes = remaining // 60
+                            seconds = remaining % 60
+                            response = (
+                                f"⏳ Бонус ещё не готов!\n"
+                                f"Подождите {minutes} минут {seconds} секунд"
+                            )
+                            keyboard = get_main_keyboard()
+                            vk.messages.send(user_id=user_id, message=response, random_id=0, keyboard=keyboard.get_keyboard())
+                            continue
                     
                     if str(user_id) not in profiles:
                         profiles[str(user_id)] = {
@@ -747,6 +777,10 @@ while True:
                     profiles[str(user_id)]['cash'] = profiles[str(user_id)].get('cash', 0) + total_bonus
                     save_profiles(profiles)
                     
+                    # Сохраняем время использования
+                    cooldown[str(user_id)] = current_time
+                    save_cooldown(cooldown)
+                    
                     response = (
                         f"🎁 ВЫ ПОЛУЧИЛИ БОНУС!\n"
                         f"╭──────────────────────╮\n"
@@ -759,7 +793,8 @@ while True:
                         response += f"│ 👑 Работник: +{format_number(worker_bonus)}$\n"
                     
                     response += f"│ 💰 Баланс: {format_number(profiles[str(user_id)]['cash'])}$\n"
-                    response += f"╰──────────────────────╯"
+                    response += f"╰──────────────────────╯\n"
+                    response += f"⏳ Следующий бонус через 15 минут"
                     
                     keyboard = get_main_keyboard()
                     vk.messages.send(user_id=user_id, message=response, random_id=0, keyboard=keyboard.get_keyboard())
@@ -894,7 +929,7 @@ while True:
                         "╭──────────────────────╮\n"
                         "│ 👤 Профиль — ваш профиль\n"
                         "│ 💼 Пассивный доход — получить доход\n"
-                        "│ 🎁 Бонус — получить бонус\n"
+                        "│ 🎁 Бонус — получить бонус (КД 15 мин)\n"
                         "│ 🏆 Топ — все топы\n"
                         "│ 📋 /команды — список команд\n"
                         "╰──────────────────────╯"
@@ -950,7 +985,7 @@ while True:
                         "╭──────────────────────╮\n"
                         "│ 👤 Профиль — ваш профиль\n"
                         "│ 💼 Пассивный доход — получить доход\n"
-                        "│ 🎁 Бонус — получить бонус\n"
+                        "│ 🎁 Бонус — получить бонус (КД 15 мин)\n"
                         "│ 🏆 Топ — все топы\n"
                         "│ ❓ Помощь — справка\n"
                         "│ /роли — список ролей\n"
