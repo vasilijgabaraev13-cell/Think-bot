@@ -275,6 +275,41 @@ while True:
                         vk.messages.send(peer_id=peer_id, message=response, random_id=0)
                         continue
                     
+                    # ===== ТОП БАЛАНС (В БЕСЕДАХ) =====
+                    if text == "/топбаланс" or text == "/топ":
+                        top_players = []
+                        for uid, profile in profiles.items():
+                            cash = profile.get('cash', 0)
+                            if cash > 0:
+                                top_players.append((uid, cash))
+                        
+                        top_players.sort(key=lambda x: x[1], reverse=True)
+                        top_players = top_players[:10]
+                        
+                        if not top_players:
+                            response = "📊 ТОП БАЛАНС\n╭──────────────────────╮\n│ Нет игроков с балансом\n╰──────────────────────╯"
+                        else:
+                            number_emojis = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"]
+                            top_list = ""
+                            for i, (uid, cash) in enumerate(top_players):
+                                try:
+                                    user_info = vk.users.get(user_ids=uid)
+                                    name = user_info[0]['first_name'] + " " + user_info[0]['last_name']
+                                except:
+                                    name = f"ID{uid}"
+                                emoji = number_emojis[i] if i < 10 else f"{i+1}."
+                                top_list += f"{emoji} {name} — {format_number(cash)}$\n"
+                            
+                            response = (
+                                f"📊 ТОП БАЛАНС\n"
+                                f"╭──────────────────────╮\n"
+                                f"{top_list}"
+                                f"╰──────────────────────╯"
+                            )
+                        
+                        vk.messages.send(peer_id=peer_id, message=response, random_id=0)
+                        continue
+                    
                     # В беседах остальное игнорируем
                     continue
                 
@@ -512,6 +547,7 @@ while True:
                         "│ 👤 Профиль — ваш профиль\n"
                         "│ 💼 Пассивный доход — получить доход\n"
                         "│ 🎁 Бонус — получить бонус\n"
+                        "│ 📊 Топ баланс — топ игроков\n"
                         "│ 📋 /команды — список команд\n"
                         "│ ⛏️ Майнинг — в разработке\n"
                         "│ 🏙️ Город — в разработке\n"
@@ -532,7 +568,7 @@ while True:
                 # ===== ВСЕ ОСТАЛЬНЫЕ КНОПКИ =====
                 if text in [
                     "🏙️ город", "⛏️ майнинг",
-                    "📢 промо", "🏆 топ", "👥 кланы",
+                    "📢 промо", "👥 кланы",
                     "📋 задания", "📦 боксы", "🏅 достижения",
                     "🏆 трофеи", "💰 донат"
                 ]:
@@ -605,6 +641,47 @@ while True:
                     )
                     continue
                 
+                # ===== ТОП БАЛАНС (В ЛИЧКЕ) =====
+                if text == "/топбаланс" or text == "/топ":
+                    top_players = []
+                    for uid, profile in profiles.items():
+                        cash = profile.get('cash', 0)
+                        if cash > 0:
+                            top_players.append((uid, cash))
+                    
+                    top_players.sort(key=lambda x: x[1], reverse=True)
+                    top_players = top_players[:10]
+                    
+                    if not top_players:
+                        response = "📊 ТОП БАЛАНС\n╭──────────────────────╮\n│ Нет игроков с балансом\n╰──────────────────────╯"
+                    else:
+                        number_emojis = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"]
+                        top_list = ""
+                        for i, (uid, cash) in enumerate(top_players):
+                            try:
+                                user_info = vk.users.get(user_ids=uid)
+                                name = user_info[0]['first_name'] + " " + user_info[0]['last_name']
+                            except:
+                                name = f"ID{uid}"
+                            emoji = number_emojis[i] if i < 10 else f"{i+1}."
+                            top_list += f"{emoji} {name} — {format_number(cash)}$\n"
+                        
+                        response = (
+                            f"📊 ТОП БАЛАНС\n"
+                            f"╭──────────────────────╮\n"
+                            f"{top_list}"
+                            f"╰──────────────────────╯"
+                        )
+                    
+                    keyboard = get_main_keyboard()
+                    vk.messages.send(
+                        user_id=user_id,
+                        message=response,
+                        random_id=0,
+                        keyboard=keyboard.get_keyboard()
+                    )
+                    continue
+                
                 # ===== КОМАНДЫ =====
                 if text == "/start":
                     keyboard = get_main_keyboard()
@@ -619,6 +696,7 @@ while True:
                         "│ 💼 Пассивный доход — получить доход\n"
                         "│ 🎁 Бонус — получить бонус\n"
                         "│ ❓ Помощь — справка\n"
+                        "│ 📊 Топ баланс — топ игроков\n"
                         "│ /роли — список ролей\n"
                         "│ /staff — список сотрудников\n"
                         "│ /setstaff — выдать роль\n"
