@@ -388,12 +388,85 @@ while True:
                     vk.messages.send(user_id=user_id, message=response, random_id=0, keyboard=keyboard.get_keyboard())
                     continue
                 
+                # ===== ПАССИВНЫЙ ДОХОД (НОВАЯ ФУНКЦИЯ) =====
+                if text in ["💼 пассивный доход", "/пассивный_доход"]:
+                    if not is_registered(user_id):
+                        continue
+                    
+                    if str(user_id) not in profiles:
+                        profiles[str(user_id)] = {
+                            "nickname": f"User{user_id}",
+                            "reg_date": datetime.now().strftime("%d:%m %H:%M %y"),
+                            "cash": 0,
+                            "donat": 0,
+                            "btc": 0,
+                            "funt": 0,
+                            "level": 1,
+                            "exp": 0,
+                            "exp_to_next": 10,
+                            "reputation": 0,
+                            "achievements": 0,
+                            "max_achievements": 4598,
+                            "notifications": ["Получите пенсию в банке", "Включите майнинг ферму", "Получить пассивный доход"]
+                        }
+                        save_profiles(profiles)
+                    
+                    profile = profiles[str(user_id)]
+                    role = get_user_role(user_id, roles)
+                    
+                    # Базовая сумма дохода
+                    base_income = 10000
+                    
+                    # Бонус за роль
+                    role_bonus = {
+                        "владелец": 50000,
+                        "руководитель": 35000,
+                        "специальный администратор": 25000,
+                        "админ бота": 20000,
+                        "модератор бота": 15000,
+                        "игрок": 0
+                    }
+                    bonus = role_bonus.get(role, 0)
+                    
+                    # Бонус за уровень (каждый уровень +1000$)
+                    level_bonus = profile.get('level', 1) * 1000
+                    
+                    # Итоговый доход
+                    total_income = base_income + bonus + level_bonus
+                    
+                    # Начисляем на счёт
+                    profiles[str(user_id)]['cash'] = profiles[str(user_id)].get('cash', 0) + total_income
+                    save_profiles(profiles)
+                    
+                    response = (
+                        f"✅ Ваш пассивный доход: {total_income:,}$\n"
+                        f"\n"
+                        f"📊 Детали:\n"
+                        f"├─ База: {base_income:,}$\n"
+                        f"├─ Бонус за роль ({role}): +{bonus:,}$\n"
+                        f"├─ Бонус за уровень ({profile.get('level', 1)}): +{level_bonus:,}$\n"
+                        f"└─ Итого: {total_income:,}$"
+                    )
+                    
+                    if role in ["модератор бота", "админ бота", "специальный администратор", "руководитель", "владелец"]:
+                        response += f"\n\n💡 Доход для работников Карл Бот - {bonus + 20000:,}$"
+                    
+                    keyboard = get_main_keyboard()
+                    vk.messages.send(
+                        user_id=user_id,
+                        message=response,
+                        random_id=0,
+                        keyboard=keyboard.get_keyboard()
+                    )
+                    continue
+                
                 # ===== ПОМОЩЬ =====
                 if text in ["❓ помощь", "/помощь", "/help"]:
                     response = (
                         "❓ ПОМОЩЬ\n"
                         "╭──────────────────────╮\n"
                         "│ 👤 Профиль — ваш профиль\n"
+                        "│ 💼 Пассивный доход — получить доход\n"
                         "│ 📋 /команды — список команд\n"
                         "│ 💼 Пассивный доход — в разработке\n"
                         "│ ⛏️ Майнинг — в разработке\n"
@@ -415,7 +488,7 @@ while True:
                 
                 # ===== ВСЕ ОСТАЛЬНЫЕ КНОПКИ =====
                 if text in [
-                    "💼 пассивный доход", "🏙️ город", "⛏️ майнинг",
+                    "🏙️ город", "⛏️ майнинг",
                     "📢 промо", "🏆 топ", "🎁 бонус", "👥 кланы",
                     "📋 задания", "📦 боксы", "🏅 достижения",
                     "🏆 трофеи", "💰 донат"
@@ -436,6 +509,7 @@ while True:
                         "📋 ДОСТУПНЫЕ КОМАНДЫ\n"
                         "╭──────────────────────╮\n"
                         "│ 👤 Профиль — ваш профиль\n"
+                        "│ 💼 Пассивный доход — получить доход\n"
                         "│ ❓ Помощь — справка\n"
                         "│ /роли — список ролей\n"
                         "│ /staff — список сотрудников\n"
