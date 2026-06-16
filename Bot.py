@@ -95,6 +95,7 @@ def get_main_keyboard():
     keyboard.add_line()
     # Пятая строка
     keyboard.add_button("❓ Помощь", color=VkKeyboardColor.PRIMARY)
+    keyboard.add_button("⏪ Назад", color=VkKeyboardColor.SECONDARY)
     return keyboard
 
 def get_registration_keyboard():
@@ -296,6 +297,28 @@ while True:
                     )
                     keyboard = get_registration_keyboard()
                     vk.messages.send(user_id=user_id, message=response, random_id=0, keyboard=keyboard.get_keyboard())
+                    continue
+                
+                # ===== КОМАНДА /МЕНЮ =====
+                if text == "/меню" or text == "/menu":
+                    keyboard = get_main_keyboard()
+                    vk.messages.send(
+                        user_id=user_id,
+                        message="📋 ГЛАВНОЕ МЕНЮ\nВыберите раздел:",
+                        random_id=0,
+                        keyboard=keyboard.get_keyboard()
+                    )
+                    continue
+                
+                # ===== КНОПКА "⏪ Назад" =====
+                if text == "⏪ назад":
+                    keyboard = get_main_keyboard()
+                    vk.messages.send(
+                        user_id=user_id,
+                        message="📋 ГЛАВНОЕ МЕНЮ\nВыберите раздел:",
+                        random_id=0,
+                        keyboard=keyboard.get_keyboard()
+                    )
                     continue
                 
                 # ===== КНОПКИ ГЛАВНОГО МЕНЮ =====
@@ -773,6 +796,7 @@ while True:
                         "│ /staff — список сотрудников\n"
                         "│ /setstaff — выдать роль\n"
                         "│ /ping — диагностика\n"
+                        "│ /меню — главное меню\n"
                         "╰──────────────────────╯"
                     )
                     keyboard = get_main_keyboard()
